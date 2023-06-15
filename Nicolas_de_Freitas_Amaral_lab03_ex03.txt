@@ -1,0 +1,226 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_PROCESSES 100
+#define MAX_NUM_QUEUES 10
+
+typedef struct
+{
+    int id;
+    int priority;
+    int time_left;
+    int running;
+} Process;
+
+Process vector_proc[10]; //Valor ilustrativo
+int cont = 0;
+
+void vector_proc_Init(void)
+{
+    int i;
+
+    for(i = 0; i< 10; i++)
+    {
+        vector_proc[i].id = 0;
+        vector_proc[i].priority = 0;
+        vector_proc[i].time_left = 0;
+        vector_proc[i].running = 0;
+    }
+}
+
+typedef struct
+{
+    Process *processes[MAX_PROCESSES];
+    int head;
+    int tail;
+} Queue;
+
+typedef struct
+{
+    Queue queues[MAX_NUM_QUEUES];
+    int num_queues;
+} Scheduler;
+
+void scheduler_init(Scheduler *s)
+{
+    s->num_queues = 0;
+}
+
+int scheduler_add_queue(Scheduler *s)
+{
+    if (s->num_queues >= MAX_NUM_QUEUES)
+    {
+        return -1;
+    }
+    Queue *q = &(s->queues[s->num_queues]);
+    q->head = 0;
+    q->tail = 0;
+    s->num_queues++;
+    return s->num_queues - 1;
+}
+
+int enqueue(Queue *q, Process *proc)
+{
+    if ((q->tail + 1) % MAX_PROCESSES == q->head)
+    {
+        return -1; // queue is full
+    }
+    q->processes[q->tail] = proc;
+    q->tail = (q->tail + 1) % MAX_PROCESSES;
+    return 0;
+}
+
+void *dequeue(Queue *q)
+{
+    if (q->head == q->tail)
+    {
+        return NULL; // queue is empty
+    }
+    Process *proc = q->processes[q->head];
+    q->head = (q->head + 1) % MAX_PROCESSES;
+    return proc;
+}
+
+int scheduler_enqueue(Scheduler *s, int queue_idx, Process *proc)
+{
+    if (queue_idx < 0 || queue_idx >= s->num_queues)
+    {
+        return -1; // invalid queue index
+    }
+    return enqueue(&(s->queues[queue_idx]), proc);
+}
+
+void *scheduler_dequeue(Scheduler *s)
+{
+    int i;
+    for (i = 0; i < s->num_queues; i++)
+    {
+        Queue *q = &(s->queues[i]);
+        void *proc = dequeue(q);
+        if (proc != NULL)
+        {
+            return proc;
+        }
+    }
+    return NULL; // all queues are empty
+}
+
+void create_process(Process *p, int i)
+{
+    p->id = i;
+    p->priority = rand() % 5 + 1;
+    p->time_left = ((rand() % 10) + 1) * 5;
+    p->running = 0;
+
+}
+
+void print_process(Process *p)
+{
+
+    printf("Process ID: %d - Priority: %d - Time Left: %d - Running: %d\n", p->id, p->priority, p->time_left, p->running);
+
+}
+
+void print_vector_proc(void)
+{
+    int i;
+    for(i = 0; i< 10; i++)
+    {
+
+        printf("Process ID: %d - Priority: %d - Time Left: %d - Running: %d\n", vector_proc[i].id, vector_proc[i].priority,  vector_proc[i].time_left, vector_proc[i].running);
+
+    }
+}
+
+void bubble_proc(Process proc[], int tam)
+{
+    int i, j;
+    Process aux;
+
+    for(i = 0; i < tam; i++)
+    {
+        for(j = 0; j < tam - 1 - i; j++)
+        {
+            if(proc[j+1].priority > proc[j].priority)
+            {
+                aux = proc[j];
+                proc[j] = proc[j+1];
+                proc[j+1] = aux;
+            }
+        }
+    }
+
+    for(i = 0; i < tam; i++)
+    {
+        for(j = 0; j < tam - 1 - i; j++)
+        {
+            if((proc[j+1].priority == proc[j].priority)&&(proc[j].priority != 0))
+            {
+                if(proc[j+1].time_left < proc[j].time_left)
+                {
+                    aux = proc[j];
+                    proc[j] = proc[j+1];
+                    proc[j+1] = aux;
+                }
+            }
+        }
+    }
+}
+
+void proc_for_vector(Process *p)
+{
+    vector_proc[cont].id = p->id;
+    vector_proc[cont].priority = p->priority;
+    vector_proc[cont].time_left = p->time_left;
+    vector_proc[cont].running = p->running;
+    cont++;
+}
+
+int main()
+{
+
+    Scheduler s;
+    scheduler_init(&s);
+    srand(time(NULL));
+
+    int q1 = scheduler_add_queue(&s);
+    int q2 = scheduler_add_queue(&s);
+    int i;
+
+    Process proc0;
+    Process proc1;
+    Process proc2;
+    Process proc3;
+
+    create_process(&proc0, 0);
+    create_process(&proc1, 1);
+    create_process(&proc2, 2);
+    create_process(&proc3, 3);
+
+    print_process(&proc0);
+    print_process(&proc1);
+    print_process(&proc2);
+    print_process(&proc3);
+    printf("\n\n");
+
+    print_vector_proc();
+    printf("\n\n");
+
+    scheduler_enqueue(&s, q1, &proc0);
+    scheduler_enqueue(&s, q1, &proc1);
+    scheduler_enqueue(&s, q2, &proc2);
+    scheduler_enqueue(&s, q2, &proc3);
+
+    proc_for_vector(&proc0);
+    proc_for_vector(&proc1);
+    proc_for_vector(&proc2);
+    proc_for_vector(&proc3);
+
+    bubble_proc(vector_proc, 10);
+
+    print_vector_proc();
+    printf("\n");
+
+    return 0;
+}
